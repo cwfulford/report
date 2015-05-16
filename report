@@ -1,0 +1,274 @@
+#$!/bin/bash
+#$Id: report,v 1.413 2015/05/16 15:02:51 fulford Exp fulford $
+# $Source: /src/merlin/usr/local/etc/RCS/report,v $
+# $Revision: 1.413 $
+# $Date: 2015/05/16 15:02:51 $
+# Author C W Fulford.
+# Copyright 2012 - 2013 (c) C W Fulford. 
+# Licensed for public use under the LGPL.
+# For assistance contact fulford@fulford.net 0709 229 5385
+###################################################################
+cmd=`basename $0`
+syntax="report [-c] [-d] [-e <email_addr>] [-m <month>] [-n] [-o <output_dir>] [-s] [-v] [-V] <host_id>"
+while [ $# -gt 0 ];do
+	case $1 in
+		-c) current=:;shift;;
+		-d) set -x;debug=:;shift 1;;
+		-e) rcpt=$2;shift 2;;
+		-o) odir=$2;shift 2;;
+		-s) display=:;shift;;
+		-v) verbose=:;shift;;
+		-V) echo "$cmd $Revision: 1.413 $"|awk '{print $1,$3}';exit;;  
+		-*) echo "$syntax" >&2;exit 1;;
+		 *) id=$1;shift;;
+	esac
+done
+
+conf=/usr/local/etc/report.cf
+eval `sed -ne '/^'$id':/,/^$/{/^[ 	].*/p}' $conf`
+debug=${debug:-""}
+[ $debug ]&& echo "debug=$debug"
+[ $debug ]&& echo "id=$id"
+
+odir=${odir:-"$HOME/reports.d/$id"}
+[ -d $odir ] || mkdir -p  $odir
+
+psout=$odir/`date +%y%m%d`.ps
+pdfout=$odir/`date +%y%m%d`.pdf
+
+tmplt=/usr/local/etc/report.d/$id
+[ -f $tmplt ] ||{ echo "$cmd: $tmplt not found!" >&2; exit 1 ;}
+[ -z "$id" ] &&{ echo "syntax: $syntax">&2; exit ;}
+if [ $current ];then
+	month=`date +%b`
+	lmonth=`date +%B`
+	year=`date +%Y`
+else
+	month=`date +%b --date="last month"`
+	lmonth=`date +%B --date="last month"`
+	year=`date +%Y --date="last month"`
+fi
+
+datafile=/var/log/report/$id.$month.db
+
+#find all records for the host in the requested month
+sudo grep -e "^$month.*$id"  /var/log/messages* |sudo dd of=$datafile 
+msgs=0
+for mbox in $mboxes;do
+	if [ -f $mbox ];then
+		mcount=`grep -e "^Date: .*$month $year" $mbox|wc -l`
+	fi
+	msgs=`expr "$msgs" + "$mcount"`
+done
+
+[ $debug ]&& echo "company = $company"
+
+#find host name
+ip=`getent hosts $id|awk '{print $1}'`
+[ $debug ] && echo "ip = $ip"
+host=`nslookup $ip|awk '/name = /{print $4}'`
+[ $debug ] && echo "host = $host"
+
+awk  -v msgs=$msgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt 'BEGIN{
+	errstat="No significant errors were detected."
+	month="'$month'"
+	lmonth="'$lmonth'"
+	repdate=strftime("%B %Y")
+	cmd="getent hosts "id
+	if($debug) print "cmd = "cmd
+	cmd|getline ip
+	close(cmd);
+	# getent return ip and host name so now split
+	split(ip,a," ")
+	ip=a[1]
+	if(debug) print "debug set"
+	# initialise array
+	c["arcmail"]=0
+	c["chkdf"]=0
+	c["chkdf_lrt"]=0
+	c["chkdf_full"]=0
+	c["chkftpd"]=0
+	c["chkfw"]=0
+	c["chkpl"]=0
+	c["chkmail"]=0
+	c["chkspam"]=0
+	c["clean"]=0
+	c["ftchbkup"]=0
+	c["fw_tot"]=0
+	c["mssngmb"]=0
+	c["lmbx"]=0
+	c["plbk_rn"]=0
+	c["plbk_tst"]=0
+	c["plbk_cmplt"]=0
+	c["plbk_trns"]=0
+	c["plbk_fld"]=0
+	c["pupd"]=0
+	c["tr_tot"]=0
+	c["secscan"]=0
+	c["tr_chk"]=0
+	c["tr_ok"]=0
+	c["tr_low"]=0
+	c["tr_vlow"]=0
+	c["srvrdn"]=0
+}FNR==NR{
+	if ($5 ~ /arcmail:/){
+		c["arcmail"]++;cl["tot"]++
+		mbx[$10]=+$6
+	}
+ 	if ($5 ~ /chkdf:/){
+		c["chkdf"]++;c["tot"]++
+		if(/Warning/){
+			c["chkdf_lrt"]++
+			if(/100%/){
+				c["chkdf_full"]++
+				c["serious"]++
+			}
+		}
+	}
+ 	if ($5 ~ /chkftpd:/){c["chkftpd"]++;c["tot"]++}
+	if ($5 ~ /chkfw/) {
+		c["chkfw"]++
+		c["tot"]++
+		c["fw_tot"]++
+		c["tr_tot"] = c["tr_tot"] + $10
+		if ($10 > 300){
+			c["tr_chk"]++
+		       	c["tr_ok"]++
+		}
+		if ($10 < 300){
+			c["tr_chk"]++
+			if ($10<200) c["tr_vlow"]++
+			else c["tr_low"]++ 
+		}
+	}
+	if ($6 ~ /clean:/) {
+		c["clean"]++;c["tot"]++
+		c["cfd"]=c["cfd"] + $8
+		c["cfz"]=c["cfz"] + $11
+	}
+ 	if ($5 ~ /chkmail:/){
+		if ($7 ~ /INBOX.Spam/){
+			c["chkspam"]++;c["tot"]++
+			if($11 > 100){
+				if($11 ~ /Not/){
+					 $11="Not Found"
+					 mssngmb[$6]=$11
+				}else{
+					spam[$6]=$11
+				}
+			}
+		}else if ($7 ~ /INBOX/){
+			c["chkmail"]++;c["tot"]++
+			if($11 > 100){
+				if($11 ~ /Not/){
+					$11="Not Found"
+					mssngmb[$6]=$11
+				}else{
+					mbxs[$6]=$11
+				}
+			}
+		}	
+	}
+ 	if ($5 ~ /plesk-qsl:/){
+		c["chkpl"]++ ;
+		c["tot"]++ ;
+		if($0 ~ /updated/){
+			c["pupd"]++
+		}
+	}
+ 	if ($5 ~ /secscan:/){c["secscan"]++;c["tot"]++}
+	if ($5 ~ /ftchbkup[-:]/){c["ftchbkup"]++;c["tot"]++}
+	if ($5 ~ /plbkup/){
+		if(/started/){
+		       	c["plbk_rn"]++
+			if(/test mode/) c["plbk_tst"]++
+		}
+		if(/completed/){
+		       	c["plbk_cmplt"]++
+			if (/transfer/) c["plbk_trns"]++
+		}		
+		if(/failed/)c["plbk_fld"]++
+	}
+	if (/server down/)c["srvrdn"]++
+	next;
+}END{  
+	c["lmbx"]=length(mbxs)+length(spam)
+	if( c["chkfw"] > 0 ) tr_ave=(c["tr_tot"] / c["chkfw"])
+	else tr_ave="unknown"	;
+	while (getline < tmplt ){
+       		gsub(/<company>/,company);
+		gsub(/<ip>/,ip);
+		gsub(/<host>/,host);
+		gsub(/<month>/,month);
+		gsub(/<lmonth>/,lmonth);
+		gsub(/<year>/,'$year');
+		gsub(/<otot>/,c["tot"]);
+		gsub(/<errstat>/,errstat);
+		gsub(/<chkftpd>/,c["chkftpd"]);
+		gsub(/<chkfw>/,c["chkfw"]);
+		gsub(/<chkmail>/,c["chkmail"]);
+		gsub(/<largembx>/,c["lmbx"]);
+		gsub(/<clean>/,c["clean"]);
+		gsub(/<cfd>/,c["cfd"]);
+		gsub(/<cfz>/,c["cfz"]);
+		gsub(/<tr_chk>/,c["tr_chk"]);
+		gsub(/<tr_ok>/,c["tr_ok"]);
+		gsub(/<tr_low>/,c["tr_low"]);
+		gsub(/<tr_vlow>/,c["tr_vlow"]);
+		gsub(/<tr_ave>/,tr_ave);
+		gsub(/<secscan>/,c["secscan"]);
+		gsub(/<ftchbkup>/,c["ftchbkup"]);
+		gsub(/<repdate>/,repdate);
+		gsub(/<msgs>/,msgs);
+		gsub(/<chkpl>/,c["chkpl"]);
+		gsub(/<pupd>/,c["pupd"]);
+		gsub(/<chkdf>/,c["chkdf"]);
+		gsub(/<chkdf_lrt>/,c["chkdf_lrt"]);
+		gsub(/<chkdf_full>/,c["chkdf_full"]);
+		gsub(/<plbk_rn>/,c["plbk_rn"]);
+		gsub(/<plbk_tst>/,c["plbk_tst"]);
+		gsub(/<plbk_cmplt>/,c["plbk_cmplt"]);
+		gsub(/<plbk_trns>/,c["plbk_trns"]);
+		gsub(/<plbk_fld>/,c["plbk_fld"]);
+		gsub(/<srvrdn>/,c["srvrdn"]);
+		print;
+	}
+	if(length(mbxs) > 0 || length(spam) >0){
+		1;2Q
+		gsub(/<mailbox details>/,"")
+		print "|"
+	}
+	if(length(mbxs) > 0){
+		print "\\fBLarge mailboxes\\fR"
+		for (i in mbxs){
+			print i "|" mbxs[i] |"sort -n -r -t\"|\" -k2"
+		}
+		close("sort -n -r -t\"|\" -k2")
+	}
+	if(length(spam) > 0){
+		print "|"
+		print "\\fBLarge spam mailboxes\\fR"
+		for (i in spam){
+			print i "|" spam[i] |"sort -n -r -t\"|\" -k2"
+		}
+	}
+	if(length(mssngmb) > 0){
+		print "|"
+		print "\\fBMissing mail boxes\\fR"
+		for (i in mssngmb){
+			print i "|" mssngmb[i]
+		}
+	}	
+	print ".TE"
+	print ".KE"
+}
+' $datafile |
+groff -t -ms > $psout
+ps2pdf $psout $pdfout
+if [ "$rcpt" ] ;then
+	mailx -a $pdfout -s "report  $id $date" $rcpt </dev/null
+fi
+if [ "$display" ] ;then
+	gv $psout&
+fi
+
