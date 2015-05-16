@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.421 2015/05/16 16:13:24 fulford Exp fulford $
+#$Id: report,v 1.422 2015/05/16 17:28:09 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.421 $
-# $Date: 2015/05/16 16:13:24 $
+# $Revision: 1.422 $
+# $Date: 2015/05/16 17:28:09 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.421 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.422 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -35,6 +35,7 @@ odir=${odir:-"$HOME/reports.d/$id"}
 
 psout=$odir/`date +%y%m%d`.ps
 pdfout=$odir/`date +%y%m%d`.pdf
+tmp=/tmp/$cmd$$
 
 tmplt=/usr/local/etc/report.d/$id
 [ -f $tmplt ] ||{ echo "$cmd: $tmplt not found!" >&2; exit 1 ;}
@@ -54,6 +55,8 @@ datafile=/var/log/report/$id.$month.db
 #find all records for the host in the requested month
 sudo grep -e "^$month.*$id" /var/log/messages*  >$datafile
 sudo grep -e "^$month.*$id" /var/log/maillog* >>$datafile
+cat $datafile |uniq >$tmp
+mv $tmp $datafile
 msgs=0
 for mbox in $mboxes;do
 	if [ -f $mbox ];then
