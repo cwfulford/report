@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.425 2015/05/16 19:53:45 fulford Exp $
+#$Id: report,v 1.426 2015/05/18 19:16:40 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.425 $
-# $Date: 2015/05/16 19:53:45 $
+# $Revision: 1.426 $
+# $Date: 2015/05/18 19:16:40 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.425 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.426 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -152,24 +152,24 @@ awk  -v msgs=$msgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt 'BEGI
 		c["cfz"]=c["cfz"] + $11
 	}
  	if ($5 ~ /chkmail:/){
-		if ($7 ~ /INBOX.Spam/){
+		if ($10 ~ /INBOX.Spam/){
 			c["chkspam"]++;c["tot"]++
-			if($11 > 100){
-				if($11 ~ /Not/){
-					 $11="Not Found"
-					 mssngmb[$6]=$11
+			if($6 > 100){
+				if($10 ~ /Not/){
+					 $10="Not Found"
+					 mssngmb[$7]=$10
 				}else{
-					spam[$6]=$11
+					spam[$7]=$10
 				}
 			}
-		}else if ($7 ~ /INBOX/){
+		}else if ($10 ~ /INBOX/){
 			c["chkmail"]++;c["tot"]++
-			if($11 > 100){
-				if($11 ~ /Not/){
-					$11="Not Found"
-					mssngmb[$6]=$11
+			if($6 > 100){
+				if($10 ~ /Not/){
+					$10="Not Found"
+					mssngmb[$7]=$10
 				}else{
-					mbxs[$6]=$11
+					mbxs[$7]=$10
 				}
 			}
 		}	
