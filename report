@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.429 2015/05/18 19:34:58 fulford Exp fulford $
+#$Id: report,v 1.430 2015/05/18 19:41:23 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.429 $
-# $Date: 2015/05/18 19:34:58 $
+# $Revision: 1.430 $
+# $Date: 2015/05/18 19:41:23 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.429 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.430 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -157,9 +157,9 @@ awk  -v msgs=$msgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt 'BEGI
 			if($6 > 100){
 				if($10 ~ /Not/){
 					 $10="Not Found"
-					 mssngmb[$6]=$10
+					 mssngmb[$9]=$10
 				}else{
-					spam[$6]=$10
+					spam[$9]=$6
 				}
 			}
 		}else if ($10 ~ /INBOX/){
@@ -167,9 +167,9 @@ awk  -v msgs=$msgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt 'BEGI
 			if($6 > 100){
 				if($10 ~ /Not/){
 					$10="Not Found"
-					mssngmb[$6]=$10
+					mssngmb[$9]=$10
 				}else{
-					mbxs[$6]=$10
+					mbxs[$9]=$6
 				}
 			}
 		}	
