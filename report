@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.437 2015/05/20 17:50:54 fulford Exp fulford $
+#$Id: report,v 1.438 2015/05/20 17:53:07 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.437 $
-# $Date: 2015/05/20 17:50:54 $
+# $Revision: 1.438 $
+# $Date: 2015/05/20 17:53:07 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.437 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.438 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -219,7 +219,7 @@ awk  -v admsgs=$admsgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt '
 		gsub(/<chkmail>/,c["chkmail"]);
 		gsub(/<largembx>/,c["lmbx"]);
 		gsub(/<arcmail>/,c["arcmail"]);
-		gsub(/<arctot>/,c["arctot"]);
+		#gsub(/<arctot>/,c["arctot"]);
 		gsub(/<clean>/,c["clean"]);
 		gsub(/<cfd>/,c["cfd"]);
 		gsub(/<cfz>/,c["cfz"]);
