@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.435 2015/05/20 12:32:34 fulford Exp fulford $
+#$Id: report,v 1.436 2015/05/20 15:11:23 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.435 $
-# $Date: 2015/05/20 12:32:34 $
+# $Revision: 1.436 $
+# $Date: 2015/05/20 15:11:23 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.435 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.436 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -52,10 +52,11 @@ fi
 
 datafile=/var/log/report/$id.$month.db
 #find all records for the host in the requested month
-sudo grep -e "^$month.*$id" /var/log/messages*  >$datafile;
-sudo grep -e "^$month.*$id" /var/log/maillog* >>$datafile;
-cat $datafile |uniq >$tmp;
-mv $tmp $datafile;
+cd /var/log
+for f in `ls -r maillog maillog\.[1-9] messages messages\.[1-9]`;do
+	sudo grep -e "^$month.*$id" $f|sort -u  >>$tmp;
+done
+sudo mv $tmp $datafile
 admsgs=0
 
 for mbox in $mboxes;do
@@ -151,7 +152,7 @@ awk  -v admsgs=$admsgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt '
 		c["cfd"]=c["cfd"] + $8
 		c["cfz"]=c["cfz"] + $11
 	}
- 	if ($5 ~ /chkmail:/){
+ 	if ($5 ~ /chkmail:/ || $5 ~ /delmail:/ ){
 		c["chkmail"]++;c["tot"]++
 		uniqmb[$6]
 		if(/Not found!/){
