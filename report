@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.439 2015/05/20 17:54:51 fulford Exp fulford $
+#$Id: report,v 1.440 2015/05/20 18:01:34 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.439 $
-# $Date: 2015/05/20 17:54:51 $
+# $Revision: 1.440 $
+# $Date: 2015/05/20 18:01:34 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.439 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.440 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -175,6 +175,7 @@ awk  -v admsgs=$admsgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt '
 		}				
 		if ($8 ~ /deleted/){
 			c["delmail"]++;c["tot"]++
+			c["deltot"]=c["deltot"]+$6
 			delmail[$10]=delmail[$10]+$6
 		}
 	}
@@ -258,7 +259,7 @@ awk  -v admsgs=$admsgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt '
 		print "|"
 	}
 	if(length(delmail) > 0) {
-		print "\\fBDeleted messages\\fR"
+		print "\\fBDeleted messages|" c["deltot"] "\\fR"
 		for (d in delmail){
 			ms=(ms + delmail[d])
 			print d "|" delmail[d]|"sort -n -r -t\"|\" -k2"
