@@ -1,8 +1,8 @@
 #$!/bin/bash
-#$Id: report,v 1.442 2015/05/21 14:40:32 fulford Exp fulford $
+#$Id: report,v 1.443 2015/05/22 12:25:51 fulford Exp fulford $
 # $Source: /src/merlin/usr/local/etc/RCS/report,v $
-# $Revision: 1.442 $
-# $Date: 2015/05/21 14:40:32 $
+# $Revision: 1.443 $
+# $Date: 2015/05/22 12:25:51 $
 # Author C W Fulford.
 # Copyright 2012 - 2013 (c) C W Fulford. 
 # Licensed for public use under the LGPL.
@@ -18,7 +18,7 @@ while [ $# -gt 0 ];do
 		-o) odir=$2;shift 2;;
 		-s) display=:;shift;;
 		-v) verbose=:;shift;;
-		-V) echo "$cmd $Revision: 1.442 $"|awk '{print $1,$3}';exit;;  
+		-V) echo "$cmd $Revision: 1.443 $"|awk '{print $1,$3}';exit;;  
 		-*) echo "$syntax" >&2;exit 1;;
 		 *) id=$1;shift;;
 	esac
@@ -73,6 +73,7 @@ ip=`getent hosts $id|awk '{print $1}'`
 host=`nslookup $ip|awk '/name = /{print $4}'`
 [ $debug ] && echo "host = $host"
 
+#LC_ALL=en_GB.UTF-8
 awk  -v admsgs=$admsgs -v id=$id -v host=$host -v debug=$debug -v tmplt=$tmplt 'BEGIN{
 	errstat="No significant errors were detected."
 	month="'$month'"
@@ -215,7 +216,8 @@ i			c["arcmail"]++;cl["tot"]++
 		gsub(/<month>/,month);
 		gsub(/<lmonth>/,lmonth);
 		gsub(/<year>/,'$year');
-		gsub(/<otot>/,c["tot"]);
+		otot=sprintf("%\47i",c["tot"]);
+		gsub(/<otot>/,sprintf("%\47i",c["tot"]));
 		gsub(/<errstat>/,errstat);
 		gsub(/<chkftpd>/,c["chkftpd"]);
 		gsub(/<chkfw>/,c["chkfw"]);
@@ -252,19 +254,20 @@ i			c["arcmail"]++;cl["tot"]++
 	}
 	if(length(amail) > 0) {
 		print "|"
-		print "\\fBArchived messages|" c["arctot"] "\\fR"
+		printf "%s%\47i%s\n","\\fBArchived messages|",c["arctot"],"\\fR"
 		for (m in amail){
 			ms=(ms + amail[m])
-			print m "|" amail[m]|"sort -n -r -t\"|\" -k2"
+			printf("%s%s%\47i\n",m,"|",amail[m])|\
+				"sort -n -r -t\"|\" -k2"
 		}
 		close("sort -n -r -t\"|\" -k2")
 		print "|"
 	}
 	if(length(delmail) > 0) {
-		print "\\fBDeleted messages|" c["deltot"] "\\fR"
+		printf "%s%\47i%s\n","\\fBDeleted messages|",c["deltot"],"\\fR"
 		for (d in delmail){
 			ms=(ms + delmail[d])
-			print d "|" delmail[d]|"sort -n -r -t\"|\" -k2"
+			printf("%s%s%\47i\n",d,"|",delmail[d])|"sort -n -r -t\"|\" -k2"
 		}
 		close("sort -n -r -t\"|\" -k2")
 		print "|"
@@ -273,7 +276,8 @@ i			c["arcmail"]++;cl["tot"]++
 		print "\\fBLarge mailboxes\\fR"
 		for (i in inbxs ){
 			ms=(ms + inbxs[i])
-			print i "|" inbxs[i] |"sort -n -r -t\"|\" -k2"
+			printf("%s%s%\47i\n", i,"|",inbxs[i])|\
+					"sort -n -r -t\"|\" -k2"
 		}
 		close("sort -n -r -t\"|\" -k2")
 	}
@@ -297,7 +301,8 @@ i			c["arcmail"]++;cl["tot"]++
 		for (i in abxs){
 			ms=(ms + abxs[i])
 			split(i,c,":")
-			print c[1] "|" c[2] "|" abxs[i] |"sort -n -r -t\"|\" -k3"
+			printf("%s%s%s%s%\47i\n",c[1],"|",c[2],"|",abxs[i])|\
+				"sort -n -t\"|\" -k1"
 		}
 		close("sort -n -r -t\"|\" -k3")
 	}
@@ -314,7 +319,7 @@ i			c["arcmail"]++;cl["tot"]++
 	#	close("sort -n -r -t\"|\" -k2")
 	#}	
 	print "|"
-	print "\\fBTotal messages processed |" ms "\\fR"
+	printf("%s%\47i%s\n","\\fBTotal messages processed |",ms,"\\fR")
 	print ".TE"
 	print ".KE"
 }
